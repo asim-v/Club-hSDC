@@ -6,18 +6,20 @@ from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import time
 
-portrait = "https://media.giphy.com/media/YOjrhM2KXm28ZsCjli/giphy.gif"
-TITULO = "Just because it's impossible, doesn't mean we shouldn't try"
-CALENDARIO = "https://calendar.google.com/calendar?cid=cHU5OXNidmlhZTBhM2ozMnZxcjk4anRhNzRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ"
-SUBTITULO = "Simon Sinek"
+
 ITEM_SHEET = 'items'
 CLIENT_SHEET = 'clients'
 NADIA_SPREAD_SHEET_KEY = "16GRZw98-vJVntIRdVnoMO6UkMOBRwKadeR_CHsK81vE"
 CREDS_JSON = 'creds.json'
-REGISTRO_URL = 'https://forms.gle/cZCpR9cT13Ph4pmx6'
-
-horario = "TBD"
-donde = "TBD"
+PARAMS = {
+    "horario": "TBD",
+    "donde": "TBD",
+    "REGISTRO_URL": 'https://forms.gle/cZCpR9cT13Ph4pmx6',
+    "portrait": "https://media.giphy.com/media/YOjrhM2KXm28ZsCjli/giphy.gif",
+    "TITULO": "Just because it's impossible, doesn't mean we shouldn't try",
+    "CALENDARIO": "https://calendar.google.com/calendar?cid=cHU5OXNidmlhZTBhM2ozMnZxcjk4anRhNzRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ",
+    "SUBTITULO": "Simon Sinek",
+}
 
 app = Flask(__name__)
 
@@ -80,53 +82,54 @@ class gsheet_helper(object):
             print("quedo listocho paporro")
 
 
-TEXT = []
-
-
-data = gsheet_helper().get_items()
-for x in data.iterrows():
-    try:
-        TEXT.append(element(tuple(x)[1][0], tuple(x)[1][1]))
-    except:
-        pass
-
-for i in TEXT:
-    t = i.GetTitle()
-    c = i.GetContent()
-    if t == "horario":
-        horario = c
-    if t == "donde":
-        donde = c
-    if t == "portrait":
-        portrait = c
-    if t == "titulo":
-        TITULO = c
-    if t == "subtitulo":
-        SUBTITULO = c
-
 def format_server_time():
-  server_time = time.localtime()
-  return time.strftime("%I:%M:%S %p", server_time)
+    server_time = time.localtime()
+    return time.strftime("%I:%M:%S %p", server_time)
 
 
-intro = element(TITULO, SUBTITULO)
-@app.route('/')  # Which page you want to request
-def index():  # Any name
+@app.route('/')
+def index():
+    values = PARAMS
 
-    context = { 'server_time': format_server_time() }# 1
-    template = render_template("index.html",#2
-                           context = context,
-                           TEXT=TEXT,
-                           url=portrait,
-                           intro=intro,
-                           Horario=horario,
-                           Donde=donde,
-                           Calendario=CALENDARIO,
-                           REGISTRO_URL=REGISTRO_URL)
+    def GetFromSheets():
+        TEXT = []
+        data = gsheet_helper().get_items()
+        for x in data.iterrows():
+            try:
+                TEXT.append(element(tuple(x)[1][0], tuple(x)[1][1]))
+            except:
+                pass
+        return TEXT
+
+    TEXT = GetFromSheets()
+    intro = element(values["TITULO"], values["SUBTITULO"])
+    for i in TEXT:
+        t = i.GetTitle()
+        c = i.GetContent()
+        if t == "Horario":
+            values["Horario"] = c
+        if t == "Donde":
+            values["Donde"] = c
+        if t == "portrait":
+            values["portrait"] = c
+        if t == "titulo":
+            values["titulo"] = c
+        if t == "subtitulo":
+            values["subtitulo"] = c
+
+    context = {'server_time': format_server_time()}  # 1
+    template = render_template("index.html",  # 2
+                               context=context,
+                               TEXT=TEXT,
+                               url=values["portrait"],
+                               intro=intro,
+                               Horario=values["Horario"],
+                               Donde=values["Donde"],
+                               Calendario=values["CALENDARIO"],
+                               REGISTRO_URL=values["REGISTRO_URL"])
     response = make_response(template)
     response.headers['Cache-Control'] = 'public, max-age=300, s-maxage=600'
     return response
-
 
 
 @app.route('/js/<path:path>')
